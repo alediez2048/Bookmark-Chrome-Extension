@@ -8,89 +8,72 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-const Database = require('better-sqlite3');
+const { db } = require('./db');
 const path = require('path');
+const crypto = require('crypto');
+const { JWT_SECRET, ADMIN_SECRET, CORS_ORIGINS, TOKEN_TTL } = require('./config');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-
-// Initialize SQLite database
-const db = new Database(path.join(__dirname, 'retweets.db'));
-
-// Create tables
-db.exec(`
-  CREATE TABLE IF NOT EXISTS retweets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id TEXT NOT NULL,
-    tweet_id TEXT NOT NULL,
-    user_handle TEXT,
-    user_name TEXT,
-    text TEXT,
-    quoted_text TEXT,
-    quoted_author TEXT,
-    media TEXT,
-    captured_at TEXT,
-    original_created_at TEXT,
-    tags TEXT,
-    auto_tags TEXT,
-    source TEXT,
-    source_url TEXT,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, tweet_id)
-  );
-
-  CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    username TEXT UNIQUE,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_retweets_user ON retweets(user_id);
-  CREATE INDEX IF NOT EXISTS idx_retweets_captured ON retweets(captured_at);
-`);
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Same-origin and non-browser requests have no Origin header.
+      if (!origin || origin.startsWith('chrome-extension://') || CORS_ORIGINS.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Origin not allowed'));
+    },
+  })
+);
 app.use(express.json({ limit: '10mb' }));
 
 // Auth middleware
 const authMiddleware = require('./middleware/auth');
-
-// Routes
-app.use('/api', require('./routes/sync'));
 
 // Health check
 app.get('/api/health', authMiddleware, (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Generate token (for testing/setup)
-app.post('/api/auth/token', (req, res) => {
-  const { username, secret } = req.body;
+// Issue an API token. Requires ADMIN_SECRET, compared in constant time.
+function secretMatches(given) {
+  const a = Buffer.from(String(given || ''));
+  const b = Buffer.from(ADMIN_SECRET);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
 
-  // In production, validate credentials properly
-  if (secret !== process.env.ADMIN_SECRET && secret !== 'demo-secret') {
+app.post('/api/auth/token', (req, res) => {
+  const { username, secret } = req.body || {};
+
+  if (!secretMatches(secret)) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  // Create or get user
-  const userId = `user_${Date.now()}`;
+  const name = typeof username === 'string' && username.trim() ? username.trim().slice(0, 64) : 'default';
 
-  try {
-    db.prepare('INSERT OR IGNORE INTO users (id, username) VALUES (?, ?)').run(userId, username || 'default');
-  } catch (e) {
-    // User exists, find them
+  // Reuse the existing user for this username so their synced data stays attached.
+  let user = db.prepare('SELECT id FROM users WHERE username = ?').get(name);
+  if (!user) {
+    user = { id: `user_${crypto.randomUUID()}` };
+    db.prepare('INSERT INTO users (id, username) VALUES (?, ?)').run(user.id, name);
   }
 
-  const token = jwt.sign({ userId, username }, JWT_SECRET, { expiresIn: '365d' });
+  const token = jwt.sign({ userId: user.id, username: name }, JWT_SECRET, { expiresIn: TOKEN_TTL });
 
-  res.json({ token, userId });
+  res.json({ token, userId: user.id });
 });
+
+// Routes (after /api/auth/token, because the sync router requires a token on everything under /api)
+app.use('/api', require('./routes/sync'));
 
 // Error handler
 app.use((err, req, res, next) => {
+  if (err.message === 'Origin not allowed') {
+    return res.status(403).json({ error: 'Origin not allowed' });
+  }
   console.error(err.stack);
   res.status(500).json({ error: 'Internal server error' });
 });
