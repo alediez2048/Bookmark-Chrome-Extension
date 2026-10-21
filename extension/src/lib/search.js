@@ -184,7 +184,8 @@ function applyFilters(retweets, filters) {
  * @returns {string} HTML with highlighted matches
  */
 export function highlightMatches(text, indices) {
-  if (!text || !indices || indices.length === 0) return text;
+  if (!text) return text;
+  if (!indices || indices.length === 0) return escapeHtml(text);
 
   // Sort indices by start position
   const sortedIndices = [...indices].sort((a, b) => a[0] - b[0]);
@@ -212,9 +213,12 @@ export function highlightMatches(text, indices) {
  * @returns {string} Escaped text
  */
 function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 /**

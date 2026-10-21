@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "icons": "node scripts/generate-icons.js",
-    "test": "echo 'Run tests in browser by opening tests/unit/*.test.js'",
+    "test": "vitest run",
     "build": "npm run icons && echo 'Extension ready in ./extension folder'",
     "server": "cd server && npm start",
     "server:install": "cd server && npm install"
@@ -23,5 +23,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/alediez2048/Bookmark-Chrome-Extension.git"
+  },
+  "devDependencies": {
+    "jsonwebtoken": "^9.0.3",
+    "vitest": "^3.2.7"
   }
 }

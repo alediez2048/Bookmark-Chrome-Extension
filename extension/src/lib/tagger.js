@@ -20,7 +20,7 @@ export function suggestTags(text, categories = DEFAULT_CATEGORIES) {
   for (const [category, keywords] of Object.entries(categories)) {
     for (const keyword of keywords) {
       // Check for word boundary match to avoid false positives
-      const regex = new RegExp(`\\b${escapeRegex(keyword)}\\b`, 'i');
+      const regex = new RegExp(`\\b${escapeRegex(keyword)}(?:e?s)?\\b`, 'i');
       if (regex.test(textLower)) {
         if (!suggestions.includes(category)) {
           suggestions.push(category);
@@ -56,7 +56,7 @@ export function getMatchingKeywords(text, category, categories = DEFAULT_CATEGOR
   const matches = [];
 
   for (const keyword of categories[category]) {
-    const regex = new RegExp(`\\b${escapeRegex(keyword)}\\b`, 'i');
+    const regex = new RegExp(`\\b${escapeRegex(keyword)}(?:e?s)?\\b`, 'i');
     if (regex.test(textLower)) {
       matches.push(keyword);
     }
@@ -82,7 +82,7 @@ export function analyzeContent(text, categories = DEFAULT_CATEGORIES) {
     const matchedKeywords = [];
 
     for (const keyword of keywords) {
-      const regex = new RegExp(`\\b${escapeRegex(keyword)}\\b`, 'gi');
+      const regex = new RegExp(`\\b${escapeRegex(keyword)}(?:e?s)?\\b`, 'gi');
       const matches = textLower.match(regex);
       if (matches) {
         matchCount += matches.length;

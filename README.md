@@ -1,5 +1,9 @@
 # Retweet Filter
 
+[![CI](https://github.com/alediez2048/Bookmark-Chrome-Extension/actions/workflows/ci.yml/badge.svg)](https://github.com/alediez2048/Bookmark-Chrome-Extension/actions/workflows/ci.yml)
+
+This repository holds Retweet Filter: the Chrome extension, an optional sync server (`server/`) and a web dashboard (`web/`).
+
 A privacy-first Chrome extension that captures, searches, and organizes your retweets locally — without using X's API.
 
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue)
@@ -107,10 +111,12 @@ Or import the file at `tests/fixtures/sample-retweets.json` via the CSV import o
 
 ## Testing
 
-Run unit tests in browser:
-1. Open extension dashboard
-2. Open browser console
-3. Import and run test files
+```bash
+npm install
+npm test
+```
+
+Vitest runs the extension's search and tagging tests and the sync server's config and auth tests. CI runs the same command on every push.
 
 Manual QA checklist: [QA_CHECKLIST.md](QA_CHECKLIST.md)
 
