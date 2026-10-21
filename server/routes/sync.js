@@ -5,7 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/auth');
-const { db } = require('../index');
+const { db } = require('../db');
 
 // Apply auth to all routes
 router.use(authMiddleware);
@@ -55,8 +55,8 @@ router.post('/sync', (req, res) => {
           r.quoted_text || '',
           r.quoted_author || '',
           JSON.stringify(r.media || []),
-          r.captured_at,
-          r.original_created_at,
+          r.captured_at ?? null,
+          r.original_created_at ?? null,
           JSON.stringify(r.tags || []),
           JSON.stringify(r.auto_tags || []),
           r.source || 'sync',

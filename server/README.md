@@ -18,12 +18,13 @@ cd server
 npm install
 ```
 
-2. Create a `.env` file:
-```env
-PORT=3000
-JWT_SECRET=your-very-secure-secret-key-here
-ADMIN_SECRET=your-admin-secret-for-token-generation
+2. Create a `.env` file from `.env.example` and fill in the two required secrets:
+```bash
+cp .env.example .env
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"   # run twice, once per secret
 ```
+
+The server exits at startup if `JWT_SECRET` or `ADMIN_SECRET` is missing, too short, or still a placeholder. Set `CORS_ORIGINS` if a web page (not just the extension) needs to call the API.
 
 3. Start the server:
 ```bash
